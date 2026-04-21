@@ -19,7 +19,7 @@ public class Server {
         String message;
         while ((message = in.readLine()) != null) {
             if (Filter.isFlagged(message)) {
-                out.println("[WARNING] Message blocked: contains prohibited content.");
+                out.println("[WARNING] Message blocked: Filtered message");
             } else {
                 System.out.println("Client: " + message);
                 out.println("Server received: " + message);
