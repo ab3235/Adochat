@@ -1,39 +1,78 @@
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 
 public class Server {
 
     private static final int PORT = 8080;
+    static ArrayList<PrintWriter> clients = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(PORT, 1, InetAddress.getByName("127.0.0.1"));
+        ServerSocket serverSocket = new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"));
         System.out.println("Server started on port " + PORT);
 
-        Socket clientSocket = serverSocket.accept();
-        System.out.println("Client connected.");
+        while (true) {
+            Socket clientSocket = serverSocket.accept();
+            new Thread(() -> handleClient(clientSocket)).start();
+        }
+    }
+    // runs client on threads 
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+    static void handleClient(Socket socket) {
+        String username = "unknown";
+        PrintWriter out = null;
 
-        // track the warns
-        Warnings warnings = new Warnings();
+        // read write for client and adds to a list
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
+            clients.add(out);
 
-        //tracks users
-        String username = in.readLine();
-        System.out.println("User joined: " + username);
+            // track the warns
+            Warnings warnings = new Warnings();
 
-        String message;
-        while ((message = in.readLine()) != null) {
-            // filter warn
-            if (Filter.isFlagged(message)) {
-                if (warnings.addWarning(out)) {
-                    System.out.println("Client has been kicked for too many warns");
-                    break;
+            // Input of first message is the username
+            username = in.readLine();
+            System.out.println("User joined: " + username);
+            broadcast(username + " joined the chat", out);
+
+            String message;
+            while ((message = in.readLine()) != null) {
+                // filter warn
+                if (Filter.isFlagged(message)) {
+                    if (warnings.addWarning(out)) {
+                        System.out.println(username + " was kicked");
+                        broadcast(username + " was kicked", out);
+                        break;
+                    }
+
+                } else {
+                    broadcast(username + ": " + message, out);
+                    out.println(username + " (you): " + message);
                 }
-            } else {
-                System.out.println("Client: " + message);
-                out.println("Server received: " + message);
+            }
+        } // catches unexpentencys
+        catch (IOException e) {
+            System.out.println(username + " disconnected");
+        } // Catches disconnection and removes clients
+        finally {
+            if (out != null) {
+                clients.remove(out);
+            }
+            broadcast(username + " left the chat", null);
+            try {
+                socket.close();
+            } catch (IOException e) {
+            }
+        }
+    }
+    // sends to everyone except sender
+
+    static synchronized void broadcast(String msg, PrintWriter sender) {
+        for (PrintWriter client : clients) {
+            if (client != sender) {
+                client.println(msg);
             }
         }
     }
