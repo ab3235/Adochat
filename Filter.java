@@ -2,9 +2,7 @@
 public class Filter {
 
     private static final String[] PROHIBITED = {
-        // Profanity
-        "damn", "crap",
-        // Threats
+        "damn", "crap", "bad",
         "i will kill", "bomb", "b0mb"
     };
 

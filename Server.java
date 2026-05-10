@@ -46,6 +46,7 @@ public class Server {
                         broadcast(username + " was kicked", out);
                         break;
                     }
+                    System.out.println(username + " warned - " + warnings.getCount() + "/" + 3);
 
                 } else {
                     broadcast(username + ": " + message, out);
